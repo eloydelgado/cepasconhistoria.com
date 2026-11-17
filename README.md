@@ -23,6 +23,20 @@ Las rutas son relativas a la raíz (`/wp-content/...`), así que la web debe ser
 - `www` → registro CNAME a `elswork.github.io`
 - `cepasconhistoria.com` (apex) → registros A: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
 
+## Formularios
+
+Los formularios de Contact Form 7 (fichas de vino y artículos del blog) se envían con
+[extras/assets/js/formularios.js](extras/assets/js/formularios.js): valida en el navegador y llama
+a la Cloud Function `contactoWeb` del proyecto Firebase `grupodelgado-prod` (la misma que usa
+delgadoseleccion.com), protegida con App Check + reCAPTCHA Enterprise.
+
+- Los ficheros de `extras/` se copian a `site/`, y el `<script>` se añade a las páginas con formulario
+  mediante `python tools/mirror.py site --post` (también se hace al regenerar).
+- La clave de reCAPTCHA Enterprise debe tener `cepasconhistoria.com` en su lista de dominios permitidos.
+- Si se deja vacía `recaptchaSiteKey`, el formulario abre el correo del visitante dirigido a info@cepasconhistoria.com.
+
+El popup de newsletter es de Mailchimp (script externo) y no depende de esta web.
+
 ## Limitaciones
 
-Los formularios de Contact Form 7 (contacto y newsletter) y el buscador de Divi necesitan PHP y no funcionan en estático.
+El buscador de Divi (`?s=`) necesita PHP y no funciona en estático.

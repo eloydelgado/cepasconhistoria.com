@@ -1,6 +1,7 @@
 """Crea una copia estatica de https://www.cepasconhistoria.com en ./site
 
-Uso:  python tools/mirror.py [directorio_salida]
+Uso:  python tools/mirror.py [directorio_salida]          (rastrear + postproceso)
+      python tools/mirror.py [directorio_salida] --post   (solo postproceso)
 
 - Rastrea todas las paginas HTML internas (siguiendo enlaces + sitemap).
 - Descarga todos los recursos del dominio (CSS, JS, imagenes, fuentes, video).
@@ -19,7 +20,8 @@ from bs4 import BeautifulSoup
 
 BASE = "https://www.cepasconhistoria.com"
 HOSTS = {"www.cepasconhistoria.com", "cepasconhistoria.com"}
-OUT = Path(sys.argv[1] if len(sys.argv) > 1 else "site").resolve()
+_args = [a for a in sys.argv[1:] if not a.startswith("--")]
+OUT = Path(_args[0] if _args else "site").resolve()
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) static-mirror"
 
 SKIP = re.compile(
@@ -233,7 +235,32 @@ def write_hosting_files():
     )
 
 
+EXTRAS = Path(__file__).resolve().parent.parent / "extras"
+FORM_TAG = '<script src="/assets/js/formularios.js" defer></script>'
+
+
+def postprocess():
+    """Anade lo propio de la version estatica: ficheros de extras/ y el script
+    de formularios (Firebase) en las paginas con Contact Form 7."""
+    import shutil
+
+    if EXTRAS.is_dir():
+        shutil.copytree(EXTRAS, OUT, dirs_exist_ok=True)
+    n = 0
+    for p in OUT.rglob("*.html"):
+        t = p.read_text(encoding="utf-8")
+        if "wpcf7-form" in t and FORM_TAG not in t:
+            t = t.replace("</body>", FORM_TAG + "\n</body>", 1)
+            p.write_text(t, encoding="utf-8", newline="")
+            n += 1
+    write_hosting_files()
+    print(f"Postproceso: script de formularios anadido a {n} paginas")
+
+
 def main():
+    if "--post" in sys.argv:  # solo postproceso, sin rastrear
+        postprocess()
+        return
     OUT.mkdir(parents=True, exist_ok=True)
     enqueue(BASE + "/")
     for sm in ("page-sitemap.xml", "post-sitemap.xml", "category-sitemap.xml"):
@@ -261,7 +288,7 @@ def main():
                 continue
             p.write_text(rewrite(t, p.suffix in (".html", ".htm")), encoding="utf-8", newline="")
 
-    write_hosting_files()
+    postprocess()
     pages = sum(1 for p in saved.values() if p.suffix == ".html")
     print(f"\nPaginas: {pages}  Recursos: {len(saved) - pages}  Errores: {len(errors)}")
     for e in errors:
