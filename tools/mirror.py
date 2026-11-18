@@ -252,8 +252,11 @@ def relativize():
     url(/...)) en relativas a cada fichero, para que la web funcione tanto en la
     raiz de un dominio como en una subcarpeta (usuario.github.io/repo/)."""
     tops = "|".join(sorted((re.escape(p.name) for p in OUT.iterdir()), key=len, reverse=True))
-    plain = re.compile(r"(?<=[\"'(=,\s])/(?=(?:%s)(?:[/\"'?#)\s,]|\\/|$))" % tops)
-    escaped = re.compile(r"(?<=[\"',\s])\\/(?=(?:%s)(?:\\/|[\"'?#]))" % tops)
+    # Tambien tras &quot; / &#039;: Divi guarda una copia del contenido como JSON
+    # escapado dentro de atributos (data-et-multi-view) y la inyecta por JS.
+    after = r"(?:(?<=[\"'(=,\s])|(?<=&quot;)|(?<=&#039;))"
+    plain = re.compile(after + r"/(?=(?:%s)(?:[/\"'?#)\s,&]|\\/|$))" % tops)
+    escaped = re.compile(after + r"\\/(?=(?:%s)(?:\\/|[\"'?#&]))" % tops)
     home = re.compile(r"(\s(?:href|action)=)([\"'])/\2")
     n = 0
     for p in list(OUT.rglob("*.html")) + list(OUT.rglob("*.css")):
