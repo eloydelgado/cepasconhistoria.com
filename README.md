@@ -20,7 +20,7 @@ Las rutas son relativas a la raíz (`/wp-content/...`), así que la web debe ser
 
 ## DNS para GitHub Pages
 
-- `www` → registro CNAME a `elswork.github.io`
+- `www` → registro CNAME a `eloydelgado.github.io`
 - `cepasconhistoria.com` (apex) → registros A: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
 
 ## Formularios
