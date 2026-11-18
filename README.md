@@ -16,7 +16,9 @@ python tools/serve.py 8000          # previsualizar en http://127.0.0.1:8000/
 python tools/mirror.py site         # regenerar desde la WordPress (si sigue en línea)
 ```
 
-Las rutas son relativas a la raíz (`/wp-content/...`), así que la web debe servirse en la raíz del dominio.
+Las rutas son relativas a cada página (`../wp-content/...`; el postproceso de `mirror.py` las convierte),
+así que la web funciona tanto en la raíz del dominio como en https://eloydelgado.github.io/cepasconhistoria.com/.
+La `404.html` calcula su `<base>` según dónde se sirva.
 
 ## DNS para GitHub Pages
 

@@ -238,10 +238,43 @@ def write_hosting_files():
 EXTRAS = Path(__file__).resolve().parent.parent / "extras"
 FORM_TAG = '<script src="/assets/js/formularios.js" defer></script>'
 
+# La 404 se sirve en cualquier ruta, asi que sus rutas relativas se resuelven
+# con un <base> calculado: "/<repo>/" en *.github.io y "/" en el dominio propio.
+BASE_TAG = (
+    "<script>(function(){var s=location.pathname.split('/')[1];"
+    "document.write('<base href=\"'+(/\\.github\\.io$/.test(location.hostname)&&s"
+    "?'/'+s+'/':'/')+'\">')})()</script>"
+)
+
+
+def relativize():
+    """Convierte las rutas absolutas a la raiz (/wp-content/..., \\/blog\\/...,
+    url(/...)) en relativas a cada fichero, para que la web funcione tanto en la
+    raiz de un dominio como en una subcarpeta (usuario.github.io/repo/)."""
+    tops = "|".join(sorted((re.escape(p.name) for p in OUT.iterdir()), key=len, reverse=True))
+    plain = re.compile(r"(?<=[\"'(=,\s])/(?=(?:%s)(?:[/\"'?#)\s,]|\\/|$))" % tops)
+    escaped = re.compile(r"(?<=[\"',\s])\\/(?=(?:%s)(?:\\/|[\"'?#]))" % tops)
+    home = re.compile(r"(\s(?:href|action)=)([\"'])/\2")
+    n = 0
+    for p in list(OUT.rglob("*.html")) + list(OUT.rglob("*.css")):
+        is_404 = p == OUT / "404.html"
+        depth = 0 if is_404 else len(p.relative_to(OUT).parts) - 1
+        rel = "../" * depth
+        t = p.read_text(encoding="utf-8")
+        new = plain.sub(lambda m: rel, t)
+        new = escaped.sub(lambda m: rel.replace("/", "\\/"), new)
+        new = home.sub(lambda m: m.group(1) + m.group(2) + (rel or "./") + m.group(2), new)
+        if is_404 and "<base href" not in new:
+            new = re.sub(r"(<head[^>]*>)", lambda m: m.group(1) + BASE_TAG, new, count=1)
+        if new != t:
+            p.write_text(new, encoding="utf-8", newline="")
+            n += 1
+    print(f"Postproceso: rutas relativas en {n} ficheros")
+
 
 def postprocess():
-    """Anade lo propio de la version estatica: ficheros de extras/ y el script
-    de formularios (Firebase) en las paginas con Contact Form 7."""
+    """Anade lo propio de la version estatica: ficheros de extras/, el script
+    de formularios (Firebase) en las paginas con Contact Form 7 y rutas relativas."""
     import shutil
 
     if EXTRAS.is_dir():
@@ -249,10 +282,11 @@ def postprocess():
     n = 0
     for p in OUT.rglob("*.html"):
         t = p.read_text(encoding="utf-8")
-        if "wpcf7-form" in t and FORM_TAG not in t:
+        if "wpcf7-form" in t and "assets/js/formularios.js" not in t:
             t = t.replace("</body>", FORM_TAG + "\n</body>", 1)
             p.write_text(t, encoding="utf-8", newline="")
             n += 1
+    relativize()
     write_hosting_files()
     print(f"Postproceso: script de formularios anadido a {n} paginas")
 
